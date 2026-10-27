@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
 
 class ItemController extends Controller
 {
@@ -23,12 +24,14 @@ class ItemController extends Controller
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
         ]);
+
         if ($validator->fails()) {
             return response()->json([
                 'status' => false,
                 'errors' => $validator->errors()
             ], 422);
         }
+
         DB::table('items')->insert([
             'name' => $request->name,
             'description' => $request->description,
@@ -44,26 +47,27 @@ class ItemController extends Controller
     }
 
     // UPDATE: Memperbarui data berdasarkan ID
-    public function update(Request $request, $id)
+    public function update(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'id' => 'required|exists:items,id',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
             'stock' => 'required|integer|min:0',
         ]);
         if ($validator->fails()) {
-        return response()->json([
-            'status' => false,
-            'errors' => $validator->errors()
-        ], 422);
+            return response()->json([
+                'status' => false,
+                'errors' => $validator->errors()
+            ], 422);
         }
-        DB::table('items')->where('id', $id)->update([
+        DB::table('items')->where('id', $request->id)->update([
             'name' => $request->name,
             'description' => $request->description,
             'price' => $request->price,
             'stock' => $request->stock,
-            'updated_at' => now(),
+            'updated_at' => now()
         ]);
         return response()->json([
             'status' => true,
@@ -72,9 +76,9 @@ class ItemController extends Controller
     }
 
     // DELETE: Menghapus data berdasarkan ID
-    public function destroy($id)
+    public function destroy(Request $request)
     {
-        DB::table('items')->where('id', $id)->delete();
+        DB::table('items')->where('id', $request->id)->delete();
         return response()->json([
             'status' => true,
             'message' => 'Item berhasil dihapus!'
