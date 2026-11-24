@@ -14,5 +14,6 @@ Route::delete('/items', [ItemController::class, 'destroy']);
 
 Route::get('/transactions', [TransactionController::class, 'index'])->name('transactions.index');
 Route::get('/transactions/create', [TransactionController::class, 'create'])->name('transactions.create');
+Route::get('/transactions/rekap-detail', [TransactionController::class, 'rekap'])->name('transactions.rekap');
 Route::get('/transactions/show/{id}', [TransactionController::class, 'show'])->name('transactions.show');
 Route::post('/transactions', [TransactionController::class, 'store'])->name('transactions.store');

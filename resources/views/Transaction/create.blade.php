@@ -25,6 +25,11 @@
                         value="{{ date('Y-m-d') }}">
                 </div>
                 <div class="mb-3">
+                    <label for="customer" class="form-label">Nama Customer:</label>
+                    <input type="text" class="form-control" id="customer" placeholder="Masukkan Nama Customer"
+                        name="customer">
+                </div>
+                <div class="mb-3">
                     <label for="keterangan" class="form-label">Keterangan:</label>
                     <input type="text" class="form-control" id="keterangan" placeholder="Masukkan Keterangan"
                         name="keterangan">
@@ -79,6 +84,16 @@
                             </tr>
                         </tbody>
                         <tfoot>
+                            <tr>
+                                <th colspan="5" class="text-end fw-bold">Total (Rp):</th>
+                                <th class="fw-bold text-primary fs-5 text-end" id="TotalText">0</th>
+                            </tr>
+                            <tr>
+                                <th colspan="5" class="text-end fw-bold">Discount (%):</th>
+                                <th class="fw-bold text-primary fs-5 text-end">
+                                    <input type="number" class="form-control text-end" id="discountInput" value="0"
+                                        min="0" max="100">
+                            </tr>
                             <tr>
                                 <th colspan="5" class="text-end fw-bold">Grand Total (Rp):</th>
                                 <th class="fw-bold text-primary fs-5 text-end" id="grandTotalText">0</th>
@@ -230,13 +245,14 @@
                 </tr>
             `);
                     $("#btnSubmitTransaction").prop("disabled", true);
+                    $("#TotalText").text("0");
                     $("#grandTotalText").text("0");
                     return;
                 }
 
-                let grandTotal = 0;
+                let total = 0;
                 cart.forEach((item, index) => {
-                    grandTotal += item.subtotal;
+                    total += item.subtotal;
                     cartBody.append(`
                 <tr>
                     <td class="text-center">
@@ -251,6 +267,9 @@
             `);
                 });
 
+                $("#TotalText").text("Rp " + total.toLocaleString('id-ID'));
+                let discountPercent = parseFloat($("#discountInput").val()) || 0;
+                let grandTotal = total - (total * discountPercent / 100);
                 $("#grandTotalText").text("Rp " + grandTotal.toLocaleString('id-ID'));
                 $("#btnSubmitTransaction").prop("disabled", false);
             }
@@ -261,9 +280,18 @@
                 renderCart();
             };
 
+            // Update Grand Total saat Discount diubah
+            $("#discountInput").on("input change", function() {
+                let total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+                let discountPercent = parseFloat($(this).val()) || 0;
+                let grandTotal = total - (total * discountPercent / 100);
+                $("#grandTotalText").text("Rp " + grandTotal.toLocaleString('id-ID'));
+            });
+
             // Simpan Transaksi via AJAX
             $("#btnSubmitTransaction").click(function() {
                 let tanggal = $("#tanggal").val();
+                let customer = $("#customer").val();
                 let keterangan = $("#keterangan").val();
 
                 if (cart.length === 0) {
@@ -274,6 +302,7 @@
                 // 1. Inisialisasi FormData
                 let formData = new FormData();
                 formData.append('tanggal', tanggal);
+                formData.append('customer', customer);
                 formData.append('keterangan', keterangan);
 
                 // 2. Loop array cart untuk dimasukkan sebagai array input Laravel
@@ -284,6 +313,8 @@
                     formData.append(`items[${index}][qty]`, item.qty);
                     formData.append(`items[${index}][subtotal]`, item.subtotal);
                 });
+
+                formData.append('discount', $("#discountInput").val() || 0);
 
                 $.ajax({
                     url: "{{ route('transactions.store') }}",
@@ -305,6 +336,10 @@
                         cart = [];
                         renderCart();
                         $("#keterangan").val("");
+                        $("#customer").val("");
+                        $("#discountInput").val(0);
+                        $("#TotalText").text("Rp 0");
+                        $("#grandTotalText").text("Rp 0");
                         window.location.href = "{{ route('transactions.index') }}";
                     },
                     error: function(xhr) {

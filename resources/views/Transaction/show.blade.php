@@ -27,7 +27,7 @@
                 <h5 class="mb-0">Detail Transaksi</h5>
                 <div class="no-print">
                     <button onclick="window.print()" class="btn btn-light btn-sm me-1">Cetak</button>
-                    <a href="/transactions" class="btn btn-secondary btn-sm">Kembali</a>
+                    <a href="{{ route('transactions.index') }}" class="btn btn-secondary btn-sm">Kembali</a>
                 </div>
             </div>
             <div class="card-body">
@@ -44,6 +44,10 @@
                             <tr>
                                 <td class="fw-bold">Tanggal</td>
                                 <td>: {{ date('d-m-Y', strtotime($transaction->transaction_date)) }}</td>
+                            </tr>
+                            <tr>
+                                <td class="fw-bold">Customer</td>
+                                <td>: {{ $transaction->customer_name ?? '-' }}</td>
                             </tr>
                         </table>
                     </div>
@@ -92,9 +96,21 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <th colspan="4" class="text-end fw-bold fs-5">Grand Total:</th>
+                                <th colspan="4" class="text-end fw-bold fs-5">Total:</th>
                                 <th class="text-end fw-bold text-primary fs-5">
                                     Rp {{ number_format($transaction->total_amount, 0, ',', '.') }}
+                                </th>
+                            </tr>
+                            <tr>
+                                <th colspan="4" class="text-end fw-bold fs-5">Diskon:</th>
+                                <th class="text-end fw-bold text-primary fs-5">
+                                     {{ number_format($transaction->discount, 2, ',', '.') }} %
+                                </th>
+                            </tr>
+                            <tr>
+                                <th colspan="4" class="text-end fw-bold fs-5">Grand Total:</th>
+                                <th class="text-end fw-bold text-primary fs-5">
+                                    Rp {{ number_format($transaction->grand_total, 0, ',', '.') }}
                                 </th>
                             </tr>
                         </tfoot>

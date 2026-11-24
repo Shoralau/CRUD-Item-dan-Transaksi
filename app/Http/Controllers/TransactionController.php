@@ -15,6 +15,28 @@ class TransactionController extends Controller
         return view('Transaction.index', ['transactions' => $transactions]);
     }
 
+    public function rekap()
+    {
+        $details = DB::table('transaction')
+            ->join('transaction_details', 'transaction.id', '=', 'transaction_details.transaction_id')
+            ->join('items', 'transaction_details.item_id', '=', 'items.id')
+            ->select(
+                'transaction.invoice_number',
+                'transaction.transaction_date',
+                'items.id as item_id',
+                'items.name as item_name',
+                'items.description as item_description',
+                'transaction_details.price',
+                'transaction_details.quantity',
+                'transaction_details.subtotal'
+            )
+            ->orderBy('transaction.transaction_date')
+            ->orderBy('transaction.invoice_number')
+            ->get();
+
+        return view('Transaction.rekap', ['details' => $details]);
+    }
+
     public function create()
     {
         $items = DB::table('items')->get();
@@ -27,6 +49,7 @@ class TransactionController extends Controller
         // 1. Validasi Input
         $request->validate([
             'tanggal' => 'required|date',
+            'customer' => 'nullable|string|max:255',
             'keterangan' => 'nullable|string|max:255',
             'items' => 'required|array|min:1',
             'items.*.id' => 'required|exists:items,id', 
@@ -38,10 +61,10 @@ class TransactionController extends Controller
         try {
             DB::beginTransaction();
 
-            // Hitung Grand Total di sisi server
-            $grandTotal = 0;
+            // Hitung Total di sisi server
+            $total = 0;
             foreach ($request->items as $item) {
-                $grandTotal += $item['qty'] * $item['price'];
+                $total += $item['qty'] * $item['price'];
             }
 
             // Simpan Data Header Transaksi dan Ambil ID yang Baru Dibuat
@@ -49,8 +72,11 @@ class TransactionController extends Controller
             $transactionId = DB::table('transaction')->insertGetId([
                 'invoice_number' => $invoiceNumber,
                 'transaction_date' => $request->tanggal,
+                'customer' => $request->customer,
                 'description' => $request->keterangan,
-                'total_amount' => $grandTotal,
+                'total_amount' => $total,
+                'discount' => $request->discount ?? 0,
+                'grand_total' => $total - ($total * ($request->discount ?? 0) / 100),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
@@ -81,7 +107,9 @@ class TransactionController extends Controller
                 'data' => [
                     'id' => $transactionId,
                     'invoice_number' => $invoiceNumber,
-                    'total_amount' => $grandTotal,
+                    'total_amount' => $total,
+                    'discount' => $request->discount ?? 0,
+                    'grand_total' => $total - ($total * ($request->discount ?? 0) / 100),
                 ],
             ], 200);
         } catch (\Exception $e) {
@@ -110,7 +138,9 @@ class TransactionController extends Controller
             ->join('items', 'transaction_details.item_id', '=', 'items.id')
             ->select(
                 'transaction_details.*',
-                'items.name as item_name'
+                'items.id as item_id',
+                'items.name as item_name',
+                'items.description as item_description'
             )
             ->where('transaction_details.transaction_id', $id)
             ->get();
